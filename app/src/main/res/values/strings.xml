@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">SmartVisionAssist</string>
+    <string name="default_command">Initializing smart navigation…</string>
+</resources>
