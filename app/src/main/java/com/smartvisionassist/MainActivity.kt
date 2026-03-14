@@ -67,7 +67,7 @@ class MainActivity : ComponentActivity() {
         providerFuture.addListener({
             val cameraProvider = providerFuture.get()
             val preview = Preview.Builder().build().also {
-                it.setSurfaceProvider(binding.previewView.surfaceProvider)
+                it.surfaceProvider = binding.previewView.surfaceProvider
             }
 
             val yoloLabels = listOf("person", "vehicle", "animal", "chair", "object")

@@ -19,32 +19,18 @@ class YoloProcessor(
 
     private fun decode(raw: Array<FloatArray>, labels: List<String>, w: Int, h: Int): List<DetectedObject> {
         val results = mutableListOf<DetectedObject>()
-        val numBoxes = raw[0].size
-
-        for (i in 0 until numBoxes) {
-            val objectness = raw[4][i]
-            if (objectness < 0.25f) continue
-
-            var bestClass = 0
-            var bestClassScore = 0f
-            for (c in 5 until raw.size) {
-                val score = raw[c][i]
-                if (score > bestClassScore) {
-                    bestClassScore = score
-                    bestClass = c - 5
-                }
-            }
-
-            val confidence = objectness * bestClassScore
-            if (confidence < 0.35f) continue
-
+        for (i in 0 until raw[0].size step 25) {
+            val score = raw[4][i]
+            if (score < 0.35f) continue
             val cx = raw[0][i] * w
             val cy = raw[1][i] * h
             val bw = raw[2][i] * w
             val bh = raw[3][i] * h
+            val classIdx = raw.indices.drop(5).maxByOrNull { raw[it][i] } ?: 0
+            val label = labels.getOrElse(classIdx - 5) { "object" }
             results += DetectedObject(
-                label = labels.getOrElse(bestClass) { "object" },
-                score = confidence,
+                label = label,
+                score = score,
                 left = (cx - bw / 2f).coerceAtLeast(0f),
                 top = (cy - bh / 2f).coerceAtLeast(0f),
                 right = (cx + bw / 2f).coerceAtMost(w.toFloat()),
