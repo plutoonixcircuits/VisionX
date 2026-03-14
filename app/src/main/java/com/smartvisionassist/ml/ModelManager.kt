@@ -13,33 +13,19 @@ class ModelManager(private val context: Context) {
     private var gpuDelegate: GpuDelegate? = null
     private val compatibilityList = CompatibilityList()
 
-    val gpuEnabled: Boolean by lazy {
-        compatibilityList.isDelegateSupportedOnThisDevice
-    }
+    val gpuEnabled: Boolean by lazy { compatibilityList.isDelegateSupportedOnThisDevice }
 
     val yoloInterpreter: Interpreter by lazy {
-        val model = FileUtil.loadMappedFile(context, "yolov8n_float16.tflite")
-        val yoloOptions = Interpreter.Options().apply {
+        val options = Interpreter.Options().apply {
             setNumThreads(4)
-            if (!gpuEnabled) {
+            if (gpuEnabled) {
+                gpuDelegate = GpuDelegate(compatibilityList.bestOptionsForThisDevice)
+                addDelegate(gpuDelegate)
+            } else {
                 setUseXNNPACK(true)
             }
         }
-
-        if (gpuEnabled) {
-            try {
-                gpuDelegate = GpuDelegate()
-                yoloOptions.addDelegate(gpuDelegate)
-                Log.d("SmartVision", "YOLO using GPU delegate")
-            } catch (t: Throwable) {
-                Log.e("SmartVision", "GPU delegate unavailable, falling back to CPU: ${t.message}")
-                gpuDelegate?.close()
-                gpuDelegate = null
-                yoloOptions.setUseXNNPACK(true)
-            }
-        }
-
-        Interpreter(model, yoloOptions)
+        Interpreter(FileUtil.loadMappedFile(context, "yolov8n_float16.tflite"), options)
     }
 
     val hazardInterpreter: Interpreter by lazy {
@@ -59,7 +45,7 @@ class ModelManager(private val context: Context) {
     }
 
     fun logRuntimeMode() {
-        val mode = if (gpuEnabled) "GPU capable device (YOLO attempts GPU)" else "CPU/XNNPACK mode"
+        val mode = if (gpuEnabled) "GPU for YOLO + CPU for hazard/depth" else "CPU/XNNPACK mode"
         Log.d("SmartVision", "Runtime mode: $mode")
     }
 
